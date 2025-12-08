@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>XROT 95 EVO | Command Node</title>
+    <meta name="theme-color" content="#050505">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-deep: #050505;
+            --bg-panel: #0f1115;
+            --bg-card: #161b22;
+            --primary: #00a8ff;
+            --accent: #ffcc00;
+            --danger: #ff3333;
+            --success: #00ff9d;
+            --text-main: #e0e6ed;
+            --text-muted: #8b949e;
+            --border: #30363d;
+            --font-ui: 'Rajdhani', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: var(--bg-deep); color: var(--text-main); font-family: var(--font-ui); overflow-x: hidden; }
+        
+        /* Utility */
+        .hidden { display: none !important; }
+        .flex { display: flex; }
+        .grid { display: grid; }
+        .text-accent { color: var(--accent); }
+        .text-danger { color: var(--danger); }
+        .btn { cursor: pointer; padding: 10px 20px; border: 1px solid var(--border); background: var(--bg-panel); color: #fff; font-family: var(--font-ui); font-weight: 700; text-transform: uppercase; transition: 0.2s; }
+        .btn:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-primary { background: var(--primary); color: #000; border: none; }
+        .btn-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; }
+
+        /* HUD Header */
+        header { position: sticky; top: 0; z-index: 100; background: rgba(5,5,5,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); padding: 10px 20px; }
+        .header-content { display: flex; justify-content: space-between; align-items: center; }
+        h1 { margin: 0; font-size: 24px; letter-spacing: 2px; }
+        h1 span { color: var(--primary); }
+        .status-dot { width: 10px; height: 10px; background: var(--success); border-radius: 50%; box-shadow: 0 0 10px var(--success); display: inline-block; margin-right: 8px; }
+
+        /* Dashboard (Machine Selector) */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .machine-card { background: var(--bg-card); border: 1px solid var(--border); padding: 20px; border-radius: 8px; position: relative; overflow: hidden; transition: transform 0.2s, border-color 0.2s; cursor: pointer; }
+        .machine-card:hover { transform: translateY(-2px); border-color: var(--primary); }
+        .machine-card.special { border-color: var(--accent); box-shadow: 0 0 20px rgba(255, 204, 0, 0.1); }
+        .badge { position: absolute; top: 10px; right: 10px; background: var(--accent); color: #000; padding: 2px 8px; font-size: 10px; font-weight: bold; border-radius: 4px; }
+        .machine-icon { font-size: 30px; margin-bottom: 15px; color: var(--text-muted); }
+        .machine-name { font-size: 18px; font-weight: 700; margin-bottom: 5px; }
+        .machine-meta { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+
+        /* Module Shell */
+        .module-shell { max-width: 800px; margin: 0 auto; padding-bottom: 80px; }
+        .sticky-mod-header { position: sticky; top: 61px; z-index: 90; background: var(--bg-panel); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; }
+        .back-btn { margin-right: 15px; font-size: 18px; color: var(--text-muted); cursor: pointer; }
+        
+        /* Navigation Tabs */
+        .tabs { display: flex; overflow-x: auto; gap: 5px; padding: 10px 20px; border-bottom: 1px solid var(--border); -ms-overflow-style: none; scrollbar-width: none; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab { padding: 8px 16px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); border-radius: 20px; font-size: 14px; white-space: nowrap; cursor: pointer; }
+        .tab.active { background: var(--primary); color: #000; border-color: var(--primary); font-weight: 600; }
+
+        /* Content Areas */
+        .content-section { padding: 20px; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Service Book Items */
+        .log-item { background: var(--bg-card); border-left: 3px solid var(--border); padding: 15px; margin-bottom: 10px; border-radius: 0 4px 4px 0; }
+        .log-header { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+        .log-desc { font-size: 15px; font-weight: 500; }
+        .log-meta { margin-top: 8px; font-size: 12px; display: flex; gap: 15px; color: var(--primary); }
+
+        /* Forms */
+        .form-group { margin-bottom: 15px; }
+        .form-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
+        .form-input { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 10px; font-family: var(--font-mono); border-radius: 4px; }
+        .form-input:focus { border-color: var(--primary); outline: none; }
+
+        /* Simulator Styles */
+        .sim-panel { background: #111; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid var(--border); }
+        .led-row { display: flex; gap: 10px; justify-content: center; margin: 15px 0; }
+        .led { width: 40px; height: 40px; border-radius: 50%; background: #222; box-shadow: inset 0 0 10px #000; transition: 0.2s; }
+        .led.green.on { background: #00ff00; box-shadow: 0 0 20px #00ff00; }
+        .led.yellow.on { background: #ffcc00; box-shadow: 0 0 20px #ffcc00; }
+        .led.red.on { background: #ff0000; box-shadow: 0 0 20px #ff0000; }
+        .led.white.on { background: #ffffff; box-shadow: 0 0 20px #ffffff; }
+
+        /* Canvas for Autonomy */
+        #autonomyCanvas { width: 100%; height: 300px; background: #080808; border: 1px solid var(--border); }
+
+        /* Toast */
+        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--bg-panel); border: 1px solid var(--primary); padding: 10px 20px; border-radius: 30px; z-index: 200; opacity: 0; pointer-events: none; transition: 0.3s; }
+        #toast.show { opacity: 1; bottom: 40px; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-content">
+            <div class="brand">
+                <h1>XROT <span>MANUAL</span></h1>
+                <div style="font-size: 10px; color: var(--text-muted);">
+                    <span class="status-dot" id="connection-status"></span> SYSTEM ONLINE
+                </div>
+            </div>
+            <div style="font-family: var(--font-mono); font-size: 12px;" id="clock">00:00:00</div>
+        </div>
+    </header>
+
+    <div id="view-dashboard" class="view">
+        <div class="dashboard-grid" id="machine-list">
+            </div>
+        <div style="text-align: center; margin-top: 40px; color: var(--text-muted); font-size: 12px;">
+            <i class="fas fa-database"></i> IndexedDB Persisted Storage v1.0
+        </div>
+    </div>
+
+    <div id="view-module" class="view hidden">
+        <div class="sticky-mod-header">
+            <div style="display: flex; align-items: center;">
+                <div class="back-btn" onclick="App.navToDashboard()"><i class="fas fa-arrow-left"></i></div>
+                <h2 id="active-machine-name" style="margin:0; font-size: 18px;">Stroj</h2>
+            </div>
+            <div class="machine-type-badge" id="active-machine-type" style="font-size: 10px; border: 1px solid var(--border); padding: 2px 5px;"></div>
+        </div>
+
+        <div class="tabs" id="module-tabs">
+            </div>
+
+        <div id="tab-service" class="content-section module-content hidden">
+            <div class="flex" style="justify-content: space-between; margin-bottom: 20px;">
+                <h3><i class="fas fa-book"></i> Servisní Kniha</h3>
+                <button class="btn btn-primary" onclick="UI.showServiceForm()"><i class="fas fa-plus"></i> Nový Záznam</button>
+            </div>
+            
+            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                <div class="sim-panel">
+                    <div style="font-size: 10px; color: var(--text-muted)">CELKEM MTH</div>
+                    <div style="font-size: 24px; color: var(--primary)" id="stats-mth">0.0</div>
+                </div>
+                <div class="sim-panel">
+                    <div style="font-size: 10px; color: var(--text-muted)">DALŠÍ OLEJ</div>
+                    <div style="font-size: 24px; color: var(--accent)" id="stats-oil">-</div>
+                </div>
+            </div>
+
+            <div id="service-form" class="sim-panel hidden">
+                <h4>Nový Záznam</h4>
+                <div class="form-group">
+                    <label class="form-label">Typ Úkonu</label>
+                    <select id="srv-type" class="form-input">
+                        <option value="check">Běžná kontrola</option>
+                        <option value="oil_engine">Výměna oleje (Motor)</option>
+                        <option value="oil_hydra">Výměna oleje (Hydraulika)</option>
+                        <option value="blade">Broušení/Výměna nožů</option>
+                        <option value="repair">Oprava</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Motohodiny</label>
+                    <input type="number" id="srv-mth" class="form-input" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Datum</label>
+                    <input type="date" id="srv-date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Popis</label>
+                    <textarea id="srv-desc" class="form-input" rows="3"></textarea>
+                </div>
+                <div class="flex" style="gap: 10px;">
+                    <button class="btn btn-primary" style="flex:1" onclick="DBWrapper.saveServiceRecord()">ULOŽIT</button>
+                    <button class="btn" onclick="document.getElementById('service-form').classList.add('hidden')">ZRUŠIT</button>
+                </div>
+            </div>
+
+            <div id="service-list"></div>
+        </div>
+
+        <div id="tab-autonomy" class="content-section module-content hidden">
+            
+            <div class="sim-panel" style="border-color: var(--success);">
+                <div class="flex" style="justify-content: space-between;">
+                    <strong>RTK STATUS</strong>
+                    <strong id="rtk-status-text" style="color: var(--danger)">NONE</strong>
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 11px; margin-top: 10px; color: var(--text-muted);">
+                    CZEPOS: rtk.cuzk.cz:2101 / VRS_RTCM32
+                </div>
+            </div>
+
+            <div class="sim-panel">
+                <h4><i class="fas fa-chart-line"></i> Live Telemetrie</h4>
+                <div style="height: 200px; position: relative;">
+                    <canvas id="telemetryChart"></canvas>
+                </div>
+                <div class="grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; text-align: center;">
+                    <div><small>RPM</small><div id="tel-rpm" style="color: var(--primary)">0</div></div>
+                    <div><small>TEMP</small><div id="tel-temp" style="color: var(--danger)">0°C</div></div>
+                    <div><small>TILT</small><div id="tel-tilt" style="color: var(--accent)">0°</div></div>
+                </div>
+            </div>
+
+            <div class="sim-panel">
+                <h4><i class="fas fa-robot"></i> Autonomy Planner SIM</h4>
+                <canvas id="autonomyCanvas"></canvas>
+                <div class="flex" style="gap: 10px; margin-top: 10px;">
+                    <button class="btn" onclick="Simulators.autonomy.setPoint('A')">SET A</button>
+                    <button class="btn" onclick="Simulators.autonomy.setPoint('B')">SET B</button>
+                    <button class="btn btn-primary" onclick="Simulators.autonomy.start()">START SIM</button>
+                </div>
+            </div>
+
+            <div class="sim-panel">
+                <h4><i class="fas fa-lightbulb"></i> BeaconNet SIM</h4>
+                <div class="led-row">
+                    <div class="led green" id="led-green"></div>
+                    <div class="led yellow" id="led-yellow"></div>
+                    <div class="led red" id="led-red"></div>
+                    <div class="led white" id="led-white"></div>
+                </div>
+                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 5px;">
+                    <button class="btn" onclick="Simulators.beacon.setMode('normal')">NORMAL (G)</button>
+                    <button class="btn" onclick="Simulators.beacon.setMode('mow')">MOWING (Y flash)</button>
+                    <button class="btn" onclick="Simulators.beacon.setMode('error')">ERROR (R)</button>
+                    <button class="btn" onclick="Simulators.beacon.setMode('auto')">AUTO (W)</button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div id="toast" role="alert" aria-live="polite">Notification</div>
+
+    <script>
+        /* --- 1. INDEXEDDB WRAPPER --- */
+        const DB = {
+            name: 'xrot-manual-db',
+            version: 1,
+            db: null,
+
+            async open() {
+                return new Promise((resolve, reject) => {
+                    const req = indexedDB.open(this.name, this.version);
+                    req.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains('machines')) {
+                            const store = db.createObjectStore('machines', { keyPath: 'id' });
+                            store.createIndex('type', 'type', { unique: false });
+                        }
+                        if (!db.objectStoreNames.contains('service_logs')) {
+                            const store = db.createObjectStore('service_logs', { keyPath: 'id' });
+                            store.createIndex('machineId', 'machineId', { unique: false });
+                            store.createIndex('date', 'date', { unique: false });
+                        }
+                    };
+                    req.onsuccess = (e) => { this.db = e.target.result; resolve(this.db); };
+                    req.onerror = (e) => reject(e);
+                });
+            },
+
+            // Generic Helpers
+            async getAll(storeName) {
+                return new Promise((resolve) => {
+                    const tx = this.db.transaction(storeName, 'readonly');
+                    const store = tx.objectStore(storeName);
+                    const req = store.getAll();
+                    req.onsuccess = () => resolve(req.result);
+                });
+            },
+
+            async add(storeName, item) {
+                return new Promise((resolve) => {
+                    const tx = this.db.transaction(storeName, 'readwrite');
+                    tx.objectStore(storeName).put(item);
+                    tx.oncomplete = () => resolve();
+                });
+            },
+
+            async getByIndex(storeName, indexName, value) {
+                return new Promise((resolve) => {
+                    const tx = this.db.transaction(storeName, 'readonly');
+                    const store = tx.objectStore(storeName);
+                    const index = store.index(indexName);
+                    const req = index.getAll(value);
+                    req.onsuccess = () => resolve(req.result);
+                });
+            }
+        };
+
+        /* --- 2. DATA MODELS --- */
+        const MACHINES_SEED = [
+            { id: 'XROT95', name: 'Barbieri XROT 95 EVO', type: 'autonomous', image: 'fa-robot' },
+            { id: 'AS940RC', name: 'AS 940 Sherpa 4WD RC', type: 'simple', image: 'fa-truck-monster' },
+            { id: 'AS940XL', name: 'AS 940 Sherpa 4WD XL', type: 'simple', image: 'fa-truck-pickup' },
+            { id: 'XCUT80', name: 'Barbieri XCUT 80', type: 'simple', image: 'fa-tractor' },
+            { id: 'OVIS1000', name: 'AS 1000 Ovis RC', type: 'simple', image: 'fa-snowplow' },
+            { id: 'Z560X', name: 'Husqvarna Z560X', type: 'simple', image: 'fa-mitten' }
+        ];
+
+        /* --- 3. APP LOGIC --- */
+        const App = {
+            activeMachine: null,
+
+            async init() {
+                await DB.open();
+                await this.seedMachines();
+                this.renderDashboard();
+                this.startClock();
+                console.log("XROT System Initialized");
+            },
+
+            async seedMachines() {
+                const existing = await DB.getAll('machines');
+                if (existing.length === 0) {
+                    for (const m of MACHINES_SEED) await DB.add('machines', m);
+                }
+            },
+
+            async renderDashboard() {
+                const list = document.getElementById('machine-list');
+                const machines = await DB.getAll('machines');
+                list.innerHTML = machines.map(m => `
+                    <div class="machine-card ${m.id === 'XROT95' ? 'special' : ''}" onclick="App.openMachine('${m.id}')">
+                        ${m.id === 'XROT95' ? '<span class="badge">AUTONOMY CORE</span>' : ''}
+                        <div class="machine-icon"><i class="fas ${m.image}"></i></div>
+                        <div class="machine-name">${m.name}</div>
+                        <div class="machine-meta">ID: ${m.id} | TYPE: ${m.type.toUpperCase()}</div>
+                    </div>
+                `).join('');
+            },
+
+            async openMachine(id) {
+                const machines = await DB.getAll('machines');
+                this.activeMachine = machines.find(m => m.id === id);
+                
+                document.getElementById('view-dashboard').classList.add('hidden');
+                document.getElementById('view-module').classList.remove('hidden');
+                
+                document.getElementById('active-machine-name').textContent = this.activeMachine.name;
+                document.getElementById('active-machine-type').textContent = this.activeMachine.type.toUpperCase();
+
+                this.renderTabs();
+                this.switchTab('service'); // Default tab
+                
+                // Initialize specific features
+                if (this.activeMachine.id === 'XROT95') {
+                    Simulators.init();
+                }
+            },
+
+            navToDashboard() {
+                document.getElementById('view-module').classList.add('hidden');
+                document.getElementById('view-dashboard').classList.remove('hidden');
+                this.activeMachine = null;
+                Simulators.stopAll();
+            },
+
+            renderTabs() {
+                const tabsContainer = document.getElementById('module-tabs');
+                let tabsHTML = `<div class="tab active" onclick="App.switchTab('service')">Servisní Kniha</div>`;
+                
+                if (this.activeMachine.type === 'autonomous') {
+                    tabsHTML += `<div class="tab" onclick="App.switchTab('autonomy')">Autonomy Core & SIM</div>`;
+                }
+                
+                tabsContainer.innerHTML = tabsHTML;
+            },
+
+            switchTab(tabId) {
+                // Update UI Tabs
+                const tabs = document.querySelectorAll('.tab');
+                tabs.forEach(t => t.classList.remove('active'));
+                event.target.classList.add('active');
+
+                // Hide all content
+                document.querySelectorAll('.module-content').forEach(c => c.classList.add('hidden'));
+                
+                // Show selected
+                document.getElementById('tab-' + tabId).classList.remove('hidden');
+
+                if (tabId === 'service') {
+                    UI.loadServiceLog();
+                } else if (tabId === 'autonomy') {
+                    // Lazy load heavy libs if needed here
+                    if(!window.Chart) this.loadChartJS();
+                }
+            },
+
+            loadChartJS() {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+                script.onload = () => Simulators.initChart();
+                document.body.appendChild(script);
+            },
+
+            startClock() {
+                setInterval(() => {
+                    const now = new Date();
+                    document.getElementById('clock').innerText = now.toLocaleTimeString();
+                }, 1000);
+            },
+
+            showToast(msg) {
+                const t = document.getElementById('toast');
+                t.textContent = msg;
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 3000);
+            }
+        };
+
+        /* --- 4. UI HANDLERS (Service Book) --- */
+        const UI = {
+            showServiceForm() {
+                document.getElementById('service-form').classList.remove('hidden');
+                document.getElementById('srv-date').valueAsDate = new Date();
+            },
+
+            async loadServiceLog() {
+                const list = document.getElementById('service-list');
+                const logs = await DB.getByIndex('service_logs', 'machineId', App.activeMachine.id);
+                
+                // Sort descending
+                logs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                // Calculate Stats
+                const maxMth = logs.reduce((max, l) => Math.max(max, parseFloat(l.mth || 0)), 0);
+                document.getElementById('stats-mth').textContent = maxMth.toFixed(1);
+
+                if (logs.length === 0) {
+                    list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted)">Žádné záznamy.</div>';
+                    return;
+                }
+
+                list.innerHTML = logs.map(l => `
+                    <div class="log-item">
+                        <div class="log-header">
+                            <span>${new Date(l.date).toLocaleDateString()}</span>
+                            <span>ID: ${l.id.substring(0,6)}</span>
+                        </div>
+                        <div class="log-desc">${l.desc}</div>
+                        <div class="log-meta">
+                            <span><i class="fas fa-clock"></i> ${l.mth} mth</span>
+                            <span><i class="fas fa-tag"></i> ${l.type}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        };
+
+        const DBWrapper = {
+            async saveServiceRecord() {
+                const type = document.getElementById('srv-type').value;
+                const mth = document.getElementById('srv-mth').value;
+                const date = document.getElementById('srv-date').value;
+                const desc = document.getElementById('srv-desc').value;
+
+                if (!mth || !date) {
+                    alert('Vyplňte datum a motohodiny!');
+                    return;
+                }
+
+                const record = {
+                    id: 'srv-' + Date.now(),
+                    machineId: App.activeMachine.id,
+                    type, mth, date, desc
+                };
+
+                await DB.add('service_logs', record);
+                document.getElementById('service-form').classList.add('hidden');
+                UI.loadServiceLog();
+                App.showToast('Záznam uložen.');
+            }
+        };
+
+        /* --- 5. SIMULATORS (XROT Only) --- */
+        const Simulators = {
+            telemetryInterval: null,
+            chart: null,
+            
+            init() {
+                // Initialize Beacon
+                this.beacon.setMode('normal');
+            },
+
+            stopAll() {
+                clearInterval(this.telemetryInterval);
+                if (this.chart) this.chart.destroy();
+            },
+
+            initChart() {
+                const ctx = document.getElementById('telemetryChart').getContext('2d');
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'RPM',
+                            borderColor: '#00a8ff',
+                            data: []
+                        }, {
+                            label: 'Náklon (°)',
+                            borderColor: '#ffcc00',
+                            data: []
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        scales: {
+                            x: { display: false },
+                            y: { grid: { color: '#333' } }
+                        }
+                    }
+                });
+                this.startTelemetrySim();
+            },
+
+            startTelemetrySim() {
+                this.telemetryInterval = setInterval(() => {
+                    // Generate random industrial data
+                    const rpm = 3600 + Math.floor(Math.random() * 100 - 50);
+                    const tilt = Math.floor(Math.random() * 40);
+                    const temp = 60 + Math.floor(Math.random() * 20);
+
+                    // Update UI
+                    document.getElementById('tel-rpm').textContent = rpm;
+                    document.getElementById('tel-tilt').textContent = tilt + '°';
+                    document.getElementById('tel-temp').textContent = temp + '°C';
+
+                    // Update Chart
+                    if (this.chart) {
+                        const now = new Date().toLocaleTimeString();
+                        if (this.chart.data.labels.length > 20) {
+                            this.chart.data.labels.shift();
+                            this.chart.data.datasets.forEach(d => d.data.shift());
+                        }
+                        this.chart.data.labels.push(now);
+                        this.chart.data.datasets[0].data.push(rpm);
+                        this.chart.data.datasets[1].data.push(tilt);
+                        this.chart.update();
+                    }
+
+                    // Logic: High Tilt Warning
+                    if (tilt > 35) {
+                        this.beacon.setMode('mow'); // Warning amber
+                        document.getElementById('tel-tilt').style.color = 'red';
+                    } else {
+                        document.getElementById('tel-tilt').style.color = 'var(--accent)';
+                    }
+
+                }, 1000);
+            },
+
+            beacon: {
+                timer: null,
+                setMode(mode) {
+                    clearInterval(this.timer);
+                    document.querySelectorAll('.led').forEach(l => l.classList.remove('on'));
+                    
+                    if (mode === 'normal') {
+                        document.getElementById('led-green').classList.add('on');
+                    } else if (mode === 'error') {
+                        document.getElementById('led-red').classList.add('on');
+                    } else if (mode === 'auto') {
+                        document.getElementById('led-white').classList.add('on');
+                    } else if (mode === 'mow') {
+                        // Flash Yellow
+                        let state = false;
+                        this.timer = setInterval(() => {
+                            state = !state;
+                            const el = document.getElementById('led-yellow');
+                            state ? el.classList.add('on') : el.classList.remove('on');
+                        }, 500);
+                    }
+                }
+            },
+
+            autonomy: {
+                canvas: null,
+                ctx: null,
+                pointA: null,
+                pointB: null,
+                
+                initCanvas() {
+                    this.canvas = document.getElementById('autonomyCanvas');
+                    this.ctx = this.canvas.getContext('2d');
+                    this.canvas.width = this.canvas.clientWidth;
+                    this.canvas.height = this.canvas.clientHeight;
+                    this.clear();
+                },
+
+                clear() {
+                    if(!this.ctx) this.initCanvas();
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.ctx.fillStyle = '#111';
+                    this.ctx.fillRect(0,0, this.canvas.width, this.canvas.height);
+                    
+                    // Grid
+                    this.ctx.strokeStyle = '#222';
+                    for(let i=0; i<this.canvas.width; i+=40) {
+                        this.ctx.beginPath(); this.ctx.moveTo(i,0); this.ctx.lineTo(i,this.canvas.height); this.ctx.stroke();
+                    }
+                },
+
+                setPoint(point) {
+                    if(!this.ctx) this.initCanvas();
+                    const x = Math.random() * (this.canvas.width - 40) + 20;
+                    const y = Math.random() * (this.canvas.height - 40) + 20;
+                    
+                    if (point === 'A') this.pointA = {x, y};
+                    if (point === 'B') this.pointB = {x, y};
+                    
+                    this.draw();
+                },
+
+                draw() {
+                    this.clear();
+                    if(this.pointA) this.drawDot(this.pointA, 'A', '#00ff9d');
+                    if(this.pointB) this.drawDot(this.pointB, 'B', '#ff3333');
+                    
+                    if(this.pointA && this.pointB) {
+                        this.ctx.strokeStyle = '#fff';
+                        this.ctx.setLineDash([5, 5]);
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(this.pointA.x, this.pointA.y);
+                        this.ctx.lineTo(this.pointB.x, this.pointB.y);
+                        this.ctx.stroke();
+                        this.ctx.setLineDash([]);
+                    }
+                },
+
+                drawDot(p, label, color) {
+                    this.ctx.fillStyle = color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, 5, 0, Math.PI*2);
+                    this.ctx.fill();
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.fillText(label, p.x + 10, p.y);
+                },
+
+                start() {
+                    if(!this.pointA || !this.pointB) {
+                        alert('Nastavte body A a B!');
+                        return;
+                    }
+                    
+                    let pos = {...this.pointA};
+                    const dx = (this.pointB.x - this.pointA.x) / 100;
+                    const dy = (this.pointB.y - this.pointA.y) / 100;
+                    
+                    const interval = setInterval(() => {
+                        pos.x += dx;
+                        pos.y += dy;
+                        
+                        this.draw();
+                        this.drawDot(pos, 'X', 'yellow');
+
+                        // Simple collision check logic
+                        if (Math.abs(pos.x - this.pointB.x) < 2) {
+                            clearInterval(interval);
+                            App.showToast('Trasa dokončena.');
+                        }
+                    }, 50);
+                }
+            }
+        };
+
+        // Bootstrap
+        window.addEventListener('load', () => App.init());
+
+    </script>
+</body>
+</html>
