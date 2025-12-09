@@ -9,281 +9,474 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#050505">
 
-    <!-- Fonty a Ikony -->
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- Styl -->
-    <link rel="stylesheet" href="./style.css">
-    
-    <!-- Knihovny -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lunr.js/2.3.9/lunr.min.js"></script>
+
+    <style>
+        :root {
+            /* === BARBIERI CYBER PALETTE [zdroj: Design manuálu] === */
+            --bg-void: #020202;
+            --bg-deep: #080a0e;
+            --bg-panel: #11141a;
+            --bg-surface: #1a1f28;
+            
+            --primary: #00f3ff;       /* Cyan - UI & Info */
+            --primary-dim: #005f63;
+            --accent: #ffb800;        /* Amber - Warning/PTO (Žlutý maják) */
+            --danger: #ff2a2a;        /* Red - Critical/Stop (Červený maják) */
+            --success: #00ff9d;       /* Green - RTK Fixed (Zelený maják) */
+            --purple: #bc13fe;        /* Purple - AI/Neural */
+            --white: #ffffff;
+            
+            --text-bright: #eef7ff;
+            --text-main: #b0c0d0;
+            --text-muted: #657585;
+            
+            --header-h: 140px; 
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+            --radius: 12px;
+            --shadow-glow: 0 0 25px rgba(0,243,255,0.15);
+        }
+
+        /* === RESET & BASE === */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            background-color: var(--bg-void);
+            color: var(--text-main);
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 500;
+            line-height: 1.5;
+            overflow-x: hidden;
+            padding-top: calc(var(--header-h) + 20px); 
+            padding-bottom: calc(100px + var(--safe-bottom));
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 243, 255, 0.03) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(188, 19, 254, 0.03) 0%, transparent 40%),
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 30px 30px, 30px 30px;
+            background-attachment: fixed;
+        }
+
+        /* Vstupy ve stylu konzole */
+        input, select, textarea { 
+            font-size: 16px !important; 
+            background: var(--bg-surface); color: var(--text-bright);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        input:focus { outline: none; border-color: var(--primary); box-shadow: var(--shadow-glow); }
+
+        /* === HUD HEADER (Pevná hlavička) === */
+        .hud-header {
+            position: fixed; top: 0; left: 0; right: 0;
+            height: var(--header-h);
+            background: rgba(2, 2, 2, 0.95);
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            z-index: 9000;
+            border-bottom: 1px solid var(--primary-dim);
+            display: flex; flex-direction: column;
+            padding: max(10px, var(--safe-top)) 20px 10px 20px;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.8);
+        }
+
+        .header-row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        
+        .brand h1 {
+            font-size: 22px; color: var(--text-bright); text-transform: uppercase;
+            letter-spacing: 2px; margin: 0; line-height: 1;
+            text-shadow: 0 0 10px rgba(0,243,255,0.5);
+        }
+        .brand span { color: var(--primary); }
+        .brand .status { font-size: 10px; color: var(--text-muted); display:flex; align-items:center; gap:6px; margin-top:4px; font-family:'JetBrains Mono'; }
+        
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #333; box-shadow: 0 0 5px currentColor; }
+        .status-dot.ok { background: var(--success); color: var(--success); animation: pulse 2s infinite; }
+        .status-dot.warn { background: var(--accent); color: var(--accent); }
+        .status-dot.err { background: var(--danger); color: var(--danger); animation: blink 0.5s infinite; }
+
+        /* METEO WIDGET [zdroj: 2 - prediktivní plánování] */
+        .meteo-box {
+            display: flex; align-items: center; gap: 12px;
+            background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: var(--text-bright);
+        }
+
+        /* LIVE SENSORS ROW */
+        .sensor-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 5px; }
+        .sensor-tile { 
+            background: var(--bg-panel); padding: 6px 10px; border-radius: 6px; 
+            border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; justify-content: center;
+        }
+        .sensor-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; }
+        .sensor-val { font-size: 14px; font-weight: 700; color: var(--text-bright); font-family: 'JetBrains Mono'; }
+
+        /* === DASHBOARD GRID === */
+        .grid-container {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px; padding: 0 20px 20px; max-width: 1400px; margin: 0 auto;
+        }
+
+        .card {
+            background: var(--bg-panel); border: 1px solid rgba(255,255,255,0.05);
+            border-radius: var(--radius); padding: 16px; position: relative;
+            overflow: hidden; cursor: pointer; transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            display: flex; flex-direction: column; gap: 5px;
+        }
+        .card:active { transform: scale(0.98); background: var(--bg-surface); }
+        .card::after { content:''; position: absolute; bottom:0; left:0; height: 3px; width: 100%; background: var(--c); box-shadow: 0 -2px 10px var(--c); }
+        
+        .card-icon { font-size: 24px; color: var(--c); margin-bottom: 5px; }
+        .card-title { font-size: 14px; font-weight: 700; color: var(--text-bright); letter-spacing: 1px; }
+        .card-sub { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+
+        /* === EXPANDABLE MODULES === */
+        .module {
+            background: var(--bg-deep); margin: 0 20px 25px; border-radius: var(--radius);
+            border: 1px solid rgba(255,255,255,0.05); max-width: 1400px;
+            margin-left: auto; margin-right: auto; scroll-margin-top: 180px; position: relative;
+        }
+        .module.active { border-color: var(--primary-dim); box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+
+        .mod-head {
+            position: sticky; top: var(--header-h); background: var(--bg-panel);
+            z-index: 500; padding: 18px 20px; display: flex; justify-content: space-between;
+            align-items: center; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-radius: var(--radius) var(--radius) 0 0; transition: background 0.3s;
+        }
+        .module.active .mod-head { background: var(--bg-surface); border-bottom-color: var(--primary); }
+        
+        .mod-title { font-size: 16px; font-weight: 700; color: var(--text-bright); display: flex; align-items: center; gap: 12px; }
+        .mod-icon { color: var(--primary); width: 20px; text-align: center; }
+        
+        .mod-body { display: none; padding: 20px; background: var(--bg-void); border-radius: 0 0 var(--radius) var(--radius); }
+        .module.active .mod-body { display: block; animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* === DATA TABLES & INFO === */
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: 'JetBrains Mono'; margin-top: 10px; }
+        .data-table td { padding: 12px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--text-bright); vertical-align: top; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .val-cell { color: var(--primary); font-weight: 700; }
+        .val-danger { color: var(--danger); font-weight: 700; }
+
+        .alert-box { 
+            background: rgba(255,42,42,0.05); border-left: 4px solid var(--danger); 
+            padding: 15px; margin: 15px 0; border-radius: 4px; display: flex; gap: 15px; 
+        }
+        .alert-icon { font-size: 24px; color: var(--danger); }
+
+        /* === AI OVERLAY === */
+        .ai-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5,5,5,0.98); backdrop-filter: blur(20px);
+            z-index: 9999; display: none; flex-direction: column;
+            padding-top: var(--safe-top); padding-bottom: var(--safe-bottom);
+        }
+        .ai-overlay.open { display: flex; }
+        .ai-content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .ai-msg { max-width: 85%; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
+        .ai-msg.bot { background: #1a1a2e; border: 1px solid var(--purple); color: #e0e0ff; align-self: flex-start; }
+        .ai-msg.user { background: var(--purple); color: #000; align-self: flex-end; font-weight: 600; }
+
+        /* === FLOATING BUTTONS === */
+        .fab-stack { position: fixed; bottom: calc(20px + var(--safe-bottom)); right: 20px; display: flex; flex-direction: column; gap: 15px; z-index: 8000; }
+        .fab {
+            width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.2s;
+        }
+        .fab:active { transform: scale(0.9); }
+        .fab-ai { background: var(--purple); color: #fff; border: 2px solid rgba(255,255,255,0.2); }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 255, 157, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(0, 255, 157, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 255, 157, 0); } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
 </head>
 <body>
 
-    <!-- HLAVIČKA -->
     <header class="hud-header">
         <div class="header-row-top">
-            <div class="brand" onclick="App.goBack()" style="cursor: pointer;">
-                <!-- Dynamický název stroje -->
-                <h1 id="header-title">XROT <span>MANUAL</span></h1>
+            <div class="brand">
+                <h1>XROT <span>95 EVO</span></h1>
                 <div class="status">
                     <div id="status-dot" class="status-dot warn"></div> 
-                    <span id="system-status">SELECT MACHINE...</span>
+                    <span id="system-status">INITIALIZING...</span>
                 </div>
             </div>
-            <div class="meteo-box" id="meteo-widget"><i class="fas fa-satellite"></i> Načítám...</div>
+            <div class="meteo-box" id="meteo-widget">
+                <i class="fas fa-satellite-dish fa-spin"></i> Získávám data...
+            </div>
         </div>
-    </header>
-
-    <!-- === VIEW 1: VÝBĚR STROJE === -->
-    <div id="view-selector" class="view-container">
-        <h2 class="section-title-large">DOSTUPNÉ JEDNOTKY</h2>
-        <div class="grid-container" id="machine-grid">
-            <!-- Zde se Javascriptem vygenerují dlaždice strojů -->
-        </div>
-    </div>
-
-    <!-- === VIEW 2: DASHBOARD STROJE (Původně skrytý) === -->
-    <div id="view-dashboard" class="view-container hidden">
         
-        <!-- Horní senzory (jen pro Dashboard) -->
         <div class="sensor-row">
             <div class="sensor-tile">
-                <span class="sensor-label">GPS RTK</span>
+                <span class="sensor-label">GPS RTK [Zdroj: 1]</span>
                 <span class="sensor-val" id="rtk-val" style="color:var(--accent)">FLOAT</span>
             </div>
             <div class="sensor-tile">
-                <span class="sensor-label">SVAH (Max 45°)</span>
+                <span class="sensor-label">SVAH (Max 45°) [Zdroj: 3]</span>
                 <span class="sensor-val" id="tilt-val">0°</span>
             </div>
             <div class="sensor-tile">
-                <span class="sensor-label">TLAK NA PŮDU</span>
+                <span class="sensor-label">TLAK NA PŮDU [Zdroj: 3]</span>
                 <span class="sensor-val">171g/cm²</span>
             </div>
         </div>
+    </header>
 
-        <!-- Mřížka modulů -->
-        <div class="grid-container" style="margin-top: 20px;">
-            
-            <!-- Servisní Kniha (Hlavní) -->
-            <div class="card" style="--c:var(--accent)" onclick="ServiceBook.open()">
-                <div class="card-icon"><i class="fas fa-book-medical"></i></div>
-                <div class="card-title">SERVISNÍ KNIHA</div>
-                <div class="card-sub">Evidence, MTH & Údržba</div>
-            </div>
-
-            <!-- Telemetrie -->
-            <div class="card" style="--c:var(--primary)" onclick="openMod('mod-tele')">
-                <div class="card-icon"><i class="fas fa-chart-area"></i></div>
-                <div class="card-title">TELEMETRIE</div>
-                <div class="card-sub">Live CAN-Bus Data</div>
-            </div>
-
-            <!-- Krizová Diagnostika -->
-            <div class="card" style="--c:var(--danger)" onclick="openMod('mod-crisis')">
-                <div class="card-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <div class="card-title">DIAGNOSTIKA</div>
-                <div class="card-sub">Chybové kódy & Hydrolock</div>
-            </div>
-            
-            <!-- RTK / GPS -->
-            <div class="card" style="--c:var(--success)" onclick="openMod('mod-gps')">
-                <div class="card-icon"><i class="fas fa-map-marked-alt"></i></div>
-                <div class="card-title">RTK & DIGITÁLNÍ DVOJČE</div>
-                <div class="card-sub">CZEPOS & Export Tras</div>
-            </div>
-            
-            <!-- Příslušenství -->
-            <div class="card" style="--c:var(--purple)" onclick="openMod('mod-acc')">
-                <div class="card-icon"><i class="fas fa-cubes"></i></div>
-                <div class="card-title">PŘÍSLUŠENSTVÍ</div>
-                <div class="card-sub">MiXTY, Flex, Snow</div>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- === MODULY (Skrytá okna) === -->
-
-    <!-- 1. SERVISNÍ KNIHA -->
-    <div class="module" id="mod-service-book">
-        <div class="mod-head" style="background:var(--bg-surface); border-bottom:1px solid var(--primary);">
-            <div class="mod-title" style="width:100%; display:flex; justify-content:space-between;">
-                <span><i class="fas fa-book-medical mod-icon"></i> SERVISNÍ KNIHA</span>
-                <button class="cyber-btn-small" onclick="ServiceBook.close()">ZAVŘÍT ✕</button>
-            </div>
+    <div class="grid-container">
+        <div class="card" style="--c:var(--danger)" onclick="openMod('mod-crisis')">
+            <div class="card-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="card-title">KRIZOVÁ DIAGNOSTIKA</div>
+            <div class="card-sub">Hydrolock & Chybové kódy</div>
         </div>
         
-        <div class="mod-body">
-            <!-- Statistiky -->
-            <div class="stats-panel">
-                <div class="stat-box">
-                    <span class="stat-label">CELKEM MTH</span>
-                    <span class="stat-value" id="total-mth-display">0.0</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">NÁKLADY (ROK)</span>
-                    <span class="stat-value text-accent" id="total-cost-display">0 Kč</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">POSLEDNÍ SERVIS</span>
-                    <span class="stat-value text-success" id="last-service-date">-</span>
-                </div>
-            </div>
-
-            <!-- Intervaly -->
-            <div class="maintenance-section">
-                <h4 class="section-title">INTERVALY ÚDRŽBY</h4>
-                <div class="service-progress">
-                    <div class="progress-info">
-                        <span>Motorový olej (100h)</span>
-                        <span class="text-mono" id="countdown-100">---</span>
-                    </div>
-                    <div class="progress-track"><div class="progress-fill" id="bar-100" style="width:0%; background:var(--success);"></div></div>
-                </div>
-                <div class="service-progress">
-                    <div class="progress-info">
-                        <span>Hydraulika & Filtry (500h)</span>
-                        <span class="text-mono" id="countdown-500">---</span>
-                    </div>
-                    <div class="progress-track"><div class="progress-fill" id="bar-500" style="width:0%; background:var(--primary);"></div></div>
-                </div>
-            </div>
-
-            <!-- Ovládání -->
-            <div class="control-bar">
-                <button class="cyber-btn btn-add" onclick="ServiceBook.toggleForm()"><i class="fas fa-plus"></i> NOVÝ ZÁZNAM</button>
-                <div class="secondary-actions">
-                    <button class="cyber-btn-icon" onclick="ServiceBook.exportData()"><i class="fas fa-download"></i></button>
-                    <input type="file" id="import-file-book" style="display:none" onchange="ServiceBook.importData(this)">
-                    <button class="cyber-btn-icon" onclick="document.getElementById('import-file-book').click()"><i class="fas fa-upload"></i></button>
-                </div>
-            </div>
-
-            <!-- Formulář -->
-            <div id="add-service-form" class="cyber-form hidden">
-                <h4 style="color:var(--accent); margin-bottom:10px;">NOVÝ ÚKON</h4>
-                <div class="form-grid">
-                    <div class="form-group"><label>Datum</label><input type="date" id="book-date" class="cyber-input"></div>
-                    <div class="form-group"><label>MTH</label><input type="number" id="book-mth" class="cyber-input" step="0.1"></div>
-                    <div class="form-group">
-                        <label>Typ</label>
-                        <select id="book-type" class="cyber-input">
-                            <option value="check">Kontrola</option>
-                            <option value="oil">Olej</option>
-                            <option value="filter">Filtry</option>
-                            <option value="repair">Oprava</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label>Cena</label><input type="number" id="book-cost" class="cyber-input"></div>
-                </div>
-                <div class="form-group"><label>Popis</label><textarea id="book-desc" class="cyber-input" rows="2"></textarea></div>
-                <div class="form-actions">
-                    <button class="cyber-btn btn-save" onclick="ServiceBook.saveRecord()">ULOŽIT</button>
-                    <button class="cyber-btn btn-cancel" onclick="ServiceBook.toggleForm()">ZRUŠIT</button>
-                </div>
-            </div>
-
-            <!-- Historie -->
-            <div class="history-list-container">
-                <div class="list-header">
-                    <span class="text-muted">HISTORIE</span>
-                    <select class="mini-select" onchange="ServiceBook.filterList(this.value)">
-                        <option value="all">Vše</option>
-                        <option value="oil">Oleje</option>
-                        <option value="repair">Opravy</option>
-                    </select>
-                </div>
-                <div id="service-list-output"></div>
-            </div>
+        <div class="card" style="--c:var(--success)" onclick="openMod('mod-gps')">
+            <div class="card-icon"><i class="fas fa-map-marked-alt"></i></div>
+            <div class="card-title">RTK & DIGITÁLNÍ DVOJČE</div>
+            <div class="card-sub">CZEPOS & Export Tras</div>
+        </div>
+        
+        <div class="card" style="--c:var(--accent)" onclick="openMod('mod-service')">
+            <div class="card-icon"><i class="fas fa-wrench"></i></div>
+            <div class="card-title">SERVIS & KAPALINY</div>
+            <div class="card-sub">Intervaly 50h / 100h / 500h</div>
+        </div>
+        
+        <div class="card" style="--c:var(--primary)" onclick="openMod('mod-tele')">
+            <div class="card-icon"><i class="fas fa-chart-area"></i></div>
+            <div class="card-title">TELEMETRIE</div>
+            <div class="card-sub">Live CAN-Bus Data</div>
+        </div>
+        
+        <div class="card" style="--c:var(--purple)" onclick="openMod('mod-acc')">
+            <div class="card-icon"><i class="fas fa-cubes"></i></div>
+            <div class="card-title">PŘÍSLUŠENSTVÍ</div>
+            <div class="card-sub">MiXTY, Flex, Snow</div>
         </div>
     </div>
 
-    <!-- 2. KRIZOVÁ DIAGNOSTIKA -->
     <div class="module" id="mod-crisis">
         <div class="mod-head" onclick="toggleMod(this)">
             <div class="mod-title"><i class="fas fa-heartbeat mod-icon"></i> DIAGNOSTIKA & CHYBY (ECU)</div>
             <i class="fas fa-chevron-down mod-chevron"></i>
         </div>
         <div class="mod-body">
+            
             <div class="alert-box">
                 <i class="fas fa-radiation alert-icon"></i>
                 <div>
-                    <strong style="color:var(--danger)">CHYBA 107: PŘEVRÁCENÍ (HYDROLOCK)</strong><br>
+                    <strong style="color:var(--danger)">CHYBA 107: PŘEVRÁCENÍ (HYDROLOCK RIZIKO)</strong><br>
                     <small>Motor nouzově vypnut (>65°). Olej může být ve válcích.</small><br>
-                    <strong>POVINNÝ POSTUP:</strong>
+                    <strong>POVINNÝ POSTUP [Zdroj: 6]:</strong>
                     <ol style="margin-left:20px; font-size:13px; margin-top:5px">
-                        <li>Postavit stroj na pásy. Čekat 30 min.</li>
-                        <li><strong>VYŠROUBOVAT SVÍČKY!</strong> (Nestartovat!)</li>
-                        <li>Protočit motor startérem (5x 5s).</li>
-                        <li>Vrátit svíčky, zkontrolovat olej.</li>
+                        <li>Bezpečně postavit stroj na pásy. Čekat 30 min.</li>
+                        <li><strong>VYŠROUBOVAT SVÍČKY!</strong> (Nepokoušejte se startovat)</li>
+                        <li>Protočit motor startérem (5x 5s), aby olej vyletěl otvory svíček.</li>
+                        <li>Vrátit svíčky, zkontrolovat olej (SAE 10W-40).</li>
                     </ol>
                 </div>
             </div>
+
+            <h4 style="color:var(--text-bright); margin-top:20px; border-bottom:1px solid #333; padding-bottom:5px;">ECU & DRIVER CODES</h4>
+            <table class="data-table">
+                <tr><td class="val-danger">101-103</td><td>Chyba komunikace CAN Bus (Restart)</td></tr>
+                <tr><td class="val-danger">104</td><td>NOUZOVÉ TLAČÍTKO AKTIVNÍ</td></tr>
+                <tr><td class="val-danger">120</td><td>Nízká hladina oleje motoru</td></tr>
+                <tr><td class="val-danger">204/304</td><td>Přetížení motoru (Snížit rychlost!)</td></tr>
+                <tr><td class="val-danger">206/306</td><td>Nízké napětí 48V (Dobít)</td></tr>
+                <tr><td class="val-danger">209/309</td><td>Teplota elektromotoru (Nechat vychladnout)</td></tr>
+                <tr><td class="val-danger">130-140</td><td>Porucha driveru (Servis)</td></tr>
+            </table>
+
+            <h4 style="color:var(--text-bright); margin-top:20px; border-bottom:1px solid #333; padding-bottom:5px;">BEACON NET (Vizuální diagnostika)</h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+                <div style="background:#111; padding:8px; border-radius:4px; border-left:3px solid #00ff00; color:#fff; font-size:11px;">ZELENÁ: OK / Motor Běží</div>
+                <div style="background:#111; padding:8px; border-radius:4px; border-left:3px solid #ffcc00; color:#fff; font-size:11px;">ŽLUTÁ (Bliká): Sečení aktivní (PTO)</div>
+                <div style="background:#111; padding:8px; border-radius:4px; border-left:3px solid #ffcc00; color:#fff; font-size:11px;">ŽLUTÁ (Svítí): Svah > 35° (Varování)</div>
+                <div style="background:#111; padding:8px; border-radius:4px; border-left:3px solid #ff0000; color:#fff; font-size:11px;">ČERVENÁ: STOP / Chyba / Svah > 45°</div>
+                <div style="background:#111; padding:8px; border-radius:4px; border-left:3px solid #fff; color:#fff; font-size:11px;">BÍLÁ: Autonomie připravena</div>
+            </div>
         </div>
     </div>
 
-    <!-- 3. RTK & GPS -->
     <div class="module" id="mod-gps">
         <div class="mod-head" onclick="toggleMod(this)">
-            <div class="mod-title"><i class="fas fa-satellite mod-icon"></i> RTK & CZEPOS</div>
+            <div class="mod-title"><i class="fas fa-satellite mod-icon"></i> RTK AUTONOMIE & CZEPOS</div>
             <i class="fas fa-chevron-down mod-chevron"></i>
         </div>
         <div class="mod-body">
+            
             <div style="background:rgba(0,255,157,0.05); padding:15px; border-radius:8px; border:1px solid var(--success);">
-                <strong style="color:var(--success)">RTK STATUS: <span id="gps-status-text">FLOAT</span></strong>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong style="color:var(--success)">RTK STATUS: <span id="gps-status-text">FLOAT</span></strong>
+                    <i class="fas fa-wifi" style="color:var(--success)"></i>
+                </div>
                 <div style="font-size:11px; margin-top:8px; color:var(--text-muted); font-family:'JetBrains Mono'">
-                    IP: czepos.cuzk.cz | Port: 2101 | Mount: VRS_RTCM32
+                    <strong>Nastavení CZEPOS [Zdroj: 1]:</strong><br>
+                    IP/HOST: czepos.cuzk.cz<br>
+                    PORT: 2101<br>
+                    MOUNT: VRS_RTCM32<br>
+                    LOGIN: Vaše údaje ČÚZK
+                </div>
+                <div style="margin-top:10px; font-size:12px; color:var(--text-bright)">
+                    <i class="fas fa-info-circle"></i> Autonomie povolena pouze při ZELENÉM (FIXED) statusu (přesnost 1-3 cm). <br>
+                    <span style="color:var(--accent)">ORANŽOVÁ (FLOAT) = zákaz ukládání tras.</span>
+                </div>
+            </div>
+
+            <h4 style="color:var(--text-bright); margin:20px 0 10px;">REŽIMY UČENÍ (COMPASS SERVO) [Zdroj: 1]</h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div style="background:#222; padding:10px; border-radius:6px; cursor:pointer" onclick="alert('SHIFT+A (Start) -> SHIFT+B (Konec)')">
+                    <div style="color:var(--primary); font-weight:700">MODE 1</div>
+                    <div style="font-size:10px; color:#888">Rovnoběžné pruhy (obdélník)</div>
+                </div>
+                <div style="background:#222; padding:10px; border-radius:6px; cursor:pointer" onclick="alert('SHIFT+A -> Projet křivku -> SHIFT+C')">
+                    <div style="color:var(--accent); font-weight:700">MODE 2</div>
+                    <div style="font-size:10px; color:#888">Kopírování křivky</div>
+                </div>
+                <div style="background:#222; padding:10px; border-radius:6px; cursor:pointer" onclick="alert('Automatické řádky 95cm')">
+                    <div style="color:var(--success); font-weight:700">S-MODE 4</div>
+                    <div style="font-size:10px; color:#888">Vinice / Solární parky</div>
+                </div>
+                <div style="background:#222; padding:10px; border-radius:6px; cursor:pointer" onclick="alert('SHIFT+A, SHIFT+B...')">
+                    <div style="color:#fff; font-weight:700">S-MODE 5</div>
+                    <div style="font-size:10px; color:#888">Manuální záznam (Složité)</div>
+                </div>
+            </div>
+
+            <div style="margin-top:20px; border-top:1px solid #333; padding-top:10px;">
+                <strong style="font-size:12px;">EXPORT DIGITÁLNÍHO DVOJČETE</strong>
+                <div style="display:flex; gap:10px; margin-top:5px;">
+                    <button style="flex:1; padding:8px; background:#1a1f28; border:1px solid var(--primary); color:var(--primary); border-radius:4px;">GPX</button>
+                    <button style="flex:1; padding:8px; background:#1a1f28; border:1px solid var(--primary); color:var(--primary); border-radius:4px;">JSON</button>
+                    <button style="flex:1; padding:8px; background:#1a1f28; border:1px solid var(--primary); color:var(--primary); border-radius:4px;">SHP (QGIS)</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 4. TELEMETRIE -->
+    <div class="module" id="mod-service">
+        <div class="mod-head" onclick="toggleMod(this)">
+            <div class="mod-title"><i class="fas fa-tools mod-icon"></i> SERVIS & ÚDRŽBA</div>
+            <i class="fas fa-chevron-down mod-chevron"></i>
+        </div>
+        <div class="mod-body">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <span>MOTOHODINY:</span>
+                <input type="number" id="eng-hours" value="0" style="width:100px; padding:5px; text-align:center" onchange="calcService()">
+            </div>
+
+            <div class="service-item">
+                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;">
+                    <span>První Olej (Záběh 50h)</span>
+                    <span id="lbl-50" class="val-cell">--</span>
+                </div>
+                <div style="height:6px; background:#222; border-radius:3px;"><div id="bar-50" style="width:0%; height:100%; background:var(--accent); transition:width 1s"></div></div>
+            </div>
+
+            <div class="service-item" style="margin-top:15px;">
+                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;">
+                    <span>Motorový Olej + Filtr (100h)</span>
+                    <span id="lbl-100" class="val-cell">--</span>
+                </div>
+                <div style="height:6px; background:#222; border-radius:3px;"><div id="bar-100" style="width:0%; height:100%; background:var(--success); transition:width 1s"></div></div>
+                <div style="font-size:10px; color:#666; margin-top:3px;">Olej: <strong>SAE 10W-40</strong> (Objem: 2.2L)</div>
+            </div>
+
+            <div class="service-item" style="margin-top:15px;">
+                <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;">
+                    <span>Hydraulika + Převody (500h)</span>
+                    <span id="lbl-500" class="val-cell">--</span>
+                </div>
+                <div style="height:6px; background:#222; border-radius:3px;"><div id="bar-500" style="width:0%; height:100%; background:var(--primary); transition:width 1s"></div></div>
+                <div style="font-size:10px; color:#666; margin-top:3px;">Převodovka: <strong>SAE 80W90</strong> (0.5L)</div>
+            </div>
+
+            <div class="alert-box" style="border-color:var(--accent); background:rgba(255,184,0,0.05);">
+                <i class="fas fa-wrench alert-icon" style="color:var(--accent)"></i>
+                <div>
+                    <strong style="color:var(--accent)">UTAHOVACÍ MOMENTY [Zdroj: 6]</strong><br>
+                    Nosič čepelí: <strong>160 Nm</strong><br>
+                    Šrouby nožů: <strong>130 Nm</strong><br>
+                    Nože: <strong>36 Nm</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="module" id="mod-tele">
         <div class="mod-head" onclick="toggleMod(this)">
             <div class="mod-title"><i class="fas fa-microchip mod-icon"></i> LIVE TELEMETRIE</div>
             <i class="fas fa-chevron-down mod-chevron"></i>
         </div>
         <div class="mod-body">
-            <canvas id="teleChart" style="width:100%; height:200px; margin-bottom: 20px;"></canvas>
+            <canvas id="teleChart" style="width:100%; height:150px; margin-bottom:20px;"></canvas>
+            
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
-                <div><small>RPM</small><div id="val-rpm" style="color:var(--primary); font-size:20px; font-weight:bold;">0</div></div>
-                <div><small>TEPLOTA</small><div id="val-temp" style="color:var(--accent); font-size:20px; font-weight:bold;">0°C</div></div>
-                <div><small>ZATÍŽENÍ</small><div id="val-load" style="color:var(--purple); font-size:20px; font-weight:bold;">0%</div></div>
-                <div><small>NAPĚTÍ</small><div id="val-volt" style="color:var(--success); font-size:20px; font-weight:bold;">0V</div></div>
+                <div>
+                    <div style="font-size:10px; color:#666;">MOTOR RPM</div>
+                    <div style="font-size:24px; font-family:'JetBrains Mono'; color:var(--primary)" id="val-rpm">0</div>
+                </div>
+                <div>
+                    <div style="font-size:10px; color:#666;">TEPLOTA EL.MOTORU</div>
+                    <div style="font-size:24px; font-family:'JetBrains Mono'; color:var(--accent)" id="val-temp">0°C</div>
+                </div>
+                <div>
+                    <div style="font-size:10px; color:#666;">ZATÍŽENÍ</div>
+                    <div style="font-size:24px; font-family:'JetBrains Mono'; color:var(--purple)" id="val-load">0%</div>
+                </div>
+                <div>
+                    <div style="font-size:10px; color:#666;">NAPĚTÍ (48V sys)</div>
+                    <div style="font-size:24px; font-family:'JetBrains Mono'; color:var(--success)" id="val-volt">48.0V</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 5. PŘÍSLUŠENSTVÍ -->
     <div class="module" id="mod-acc">
         <div class="mod-head" onclick="toggleMod(this)">
             <div class="mod-title"><i class="fas fa-plug mod-icon"></i> PŘÍSLUŠENSTVÍ</div>
             <i class="fas fa-chevron-down mod-chevron"></i>
         </div>
         <div class="mod-body">
-            <div style="border-left:3px solid var(--primary); padding-left:10px; margin-bottom:10px;">
-                <strong>MiXTY Postřikovač</strong><br><small>100L nádrž, 3 trysky.</small>
+            <div style="margin-bottom:15px; border-left:3px solid var(--primary); padding-left:10px;">
+                <strong style="color:var(--text-bright)">MiXTY Postřikovač</strong><br>
+                <small style="color:var(--text-muted)">100L nádrž, 3 trysky, Elektrický pohon. Ideální pro vinice.</small>
             </div>
-            <div style="border-left:3px solid var(--accent); padding-left:10px;">
-                <strong>Flex Cut</strong><br><small>Boční sečení 420mm.</small>
+            <div style="margin-bottom:15px; border-left:3px solid var(--accent); padding-left:10px;">
+                <strong style="color:var(--text-bright)">Flex Cut (420mm)</strong><br>
+                <small style="color:var(--text-muted)">Boční sečení podél zdí/plotů. 2 nože. Automatická výška.</small>
+            </div>
+            <div style="margin-bottom:15px; border-left:3px solid var(--success); padding-left:10px;">
+                <strong style="color:var(--text-bright)">Flex Trimmer (Struna)</strong><br>
+                <small style="color:var(--text-muted)">Pro citlivé překážky. 1kW el. motor. 30-200mm výška.</small>
+            </div>
+            <div style="border-left:3px solid #fff; padding-left:10px;">
+                <strong style="color:var(--text-bright)">Sněhová Radlice (135cm)</strong><br>
+                <small style="color:var(--text-muted)">Vyžaduje zadní zvedací systém (80kg nosnost).</small>
             </div>
         </div>
     </div>
 
-    <!-- AI Overlay -->
     <div class="ai-overlay" id="aiOverlay">
         <div style="padding:15px; border-bottom:1px solid var(--purple); background:#1a0b2e; display:flex; justify-content:space-between; align-items:center;">
-            <strong style="color:var(--purple)"><i class="fas fa-brain"></i> NEURAL CORE</strong>
+            <strong style="color:var(--purple)"><i class="fas fa-brain"></i> NEURAL CORE (Zdroje 1-8)</strong>
             <i class="fas fa-times" style="color:#fff; font-size:20px;" onclick="toggleAI()"></i>
         </div>
         <div id="ai-chat-body" class="ai-content">
-            <div class="ai-msg bot">Mám data z manuálů. Zeptejte se na "Olej", "Kód 107" nebo "CZEPOS".</div>
+            <div class="ai-msg bot">
+                Mám indexovaná všechna data z manuálů. Zeptejte se na: <br>
+                <strong>"Olej"</strong>, <strong>"Kód 107"</strong>, <strong>"Svah"</strong> nebo <strong>"CZEPOS"</strong>.
+            </div>
         </div>
         <div style="padding:15px; background:var(--bg-deep); border-top:1px solid #333; display:flex; gap:10px;">
-            <input type="text" id="ai-input" placeholder="Dotaz..." style="flex:1; padding:12px;" onkeypress="if(event.key==='Enter') sendAI()">
+            <input type="text" id="ai-input" placeholder="Zadejte dotaz..." style="flex:1; padding:12px;" onkeypress="if(event.key==='Enter') sendAI()">
             <button onclick="sendAI()" style="width:50px; background:var(--purple); border:none; border-radius:6px; color:#fff;"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
@@ -292,8 +485,199 @@
         <div class="fab fab-ai" onclick="toggleAI()"><i class="fas fa-robot"></i></div>
     </div>
 
-    <script src="./app.js"></script>
+    <script>
+        // === 1. ZNALOSTNÍ BÁZE (ZDROJE DAT) ===
+        const KB = [
+            { id: "107", t: "Kód 107 Hydrolock", b: "Převrácení stroje. Motor nouzově vypnut. Olej ve válcích. Postup: Postavit na pásy, čekat 30 min, VYŠROUBOVAT SVÍČKY, protočit motor." },
+            { id: "olej", t: "Specifikace Olejů", b: "Motor: SAE 10W-40 (2.2L). Hydraulika: HV 46. Převodovka: SAE 80W90 (0.5L)." },
+            { id: "czepos", t: "CZEPOS RTK", b: "Host: czepos.cuzk.cz, Port: 2101, Mount: VRS_RTCM32. Vyžaduje login od ČÚZK." },
+            { id: "svah", t: "Limity Svahu", b: "Max 45° (100%) podélně. Max 20° při jízdě přímo do kopce/z kopce. Nad 35° se aktivuje varování (žlutý maják)." },
+            { id: "tlak", t: "Tlak na půdu", b: "168 g/cm² - minimalizuje zhutnění půdy (LIGHT and STRONG filosofie)." },
+            { id: "palivo", t: "Palivo", b: "Benzín. Nádrž 32 litrů (2x 16L). Výdrž cca 8 hodin. Rezerva 3 litry." }
+        ];
+
+        // === 2. WEATHER API (OpenMeteo) ===
+        async function initMeteo() {
+            const widget = document.getElementById('meteo-widget');
+            // Default CZ (Střed ČR)
+            let lat = 49.8175, lon = 15.4730; 
+            
+            if(navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(p => {
+                    lat = p.coords.latitude; lon = p.coords.longitude;
+                    fetchWeather(lat, lon);
+                }, () => fetchWeather(lat, lon));
+            } else { fetchWeather(lat, lon); }
+        }
+
+        async function fetchWeather(lat, lon) {
+            const widget = document.getElementById('meteo-widget');
+            try {
+                // Získání počasí pro plánování práce [Zdroj: 2 - Prediktivní plánování]
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&windspeed_unit=kmh`);
+                const data = await res.json();
+                const w = data.current_weather;
+                
+                let icon = 'sun';
+                if(w.weathercode > 3) icon = 'cloud';
+                if(w.weathercode > 50) icon = 'cloud-rain';
+
+                widget.innerHTML = `<i class="fas fa-${icon}"></i> ${w.temperature}°C | <i class="fas fa-wind"></i> ${w.windspeed} km/h`;
+            } catch(e) {
+                widget.innerHTML = `<span style="color:var(--danger)">Meteo Error</span>`;
+            }
+        }
+
+        // === 3. SERVICE LOGIC ===
+        function calcService() {
+            const h = parseInt(document.getElementById('eng-hours').value) || 0;
+            
+            // 50h
+            let oil50 = h < 50 ? 50 : Math.ceil((h+1)/100)*100;
+            updateBar('50', h, oil50, 100);
+
+            // 100h
+            let oil100 = Math.ceil((h+1)/100)*100;
+            updateBar('100', h, oil100, 100);
+
+            // 500h
+            let serv500 = Math.ceil((h+1)/500)*500;
+            updateBar('500', h, serv500, 500);
+        }
+
+        function updateBar(id, cur, target, range) {
+            const rem = target - cur;
+            const pct = Math.max(0, Math.min(100, (rem / range) * 100));
+            document.getElementById(`lbl-${id}`).innerText = `${rem}h zbývá`;
+            document.getElementById(`bar-${id}`).style.width = `${pct}%`;
+            
+            if(rem <= 10) document.getElementById(`bar-${id}`).style.backgroundColor = 'var(--danger)';
+        }
+
+        // === 4. AI CHAT ===
+        function toggleAI() { document.getElementById('aiOverlay').classList.toggle('open'); document.getElementById('ai-input').focus(); }
+
+        function sendAI() {
+            const inp = document.getElementById('ai-input');
+            const txt = inp.value.toLowerCase().trim();
+            if(!txt) return;
+
+            const box = document.getElementById('ai-chat-body');
+            box.innerHTML += `<div class="ai-msg user">${inp.value}</div>`;
+            inp.value = '';
+
+            setTimeout(() => {
+                const match = KB.find(k => txt.includes(k.id) || k.t.toLowerCase().includes(txt) || k.b.toLowerCase().includes(txt));
+                const resp = match ? `<strong>${match.t}</strong><br>${match.b}` : "Data nenalezena. Zkuste: Olej, Svah, Kód 107, CZEPOS.";
+                box.innerHTML += `<div class="ai-msg bot">${resp}</div>`;
+                box.scrollTop = box.scrollHeight;
+            }, 300);
+        }
+
+        // === 5. SIMULATION LOOP (TELEMETRIE) ===
+        let chart;
+        function initChart() {
+            const ctx = document.getElementById('teleChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(20).fill(''),
+                    datasets: [{
+                        label: 'Teplota El.Motoru °C',
+                        data: Array(20).fill(60),
+                        borderColor: '#00f3ff',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        x: { display: false },
+                        y: { grid: { color: '#222' }, ticks: { color: '#666' } }
+                    },
+                    animation: false
+                }
+            });
+        }
+
+        function simLoop() {
+            // Simulace živých dat pro demo
+            const rpm = 3600 + Math.floor(Math.random()*100 - 50);
+            const temp = 65 + Math.floor(Math.random()*5);
+            const load = 40 + Math.floor(Math.random()*20);
+            const volt = 48.2 + (Math.random()*0.4 - 0.2);
+            const tilt = Math.floor(Math.random()*10);
+
+            // Update UI
+            document.getElementById('val-rpm').innerText = rpm;
+            document.getElementById('val-temp').innerText = temp + "°C";
+            document.getElementById('val-load').innerText = load + "%";
+            document.getElementById('val-volt').innerText = volt.toFixed(1) + "V";
+            document.getElementById('tilt-val').innerText = tilt + "°";
+
+            // Update Chart
+            const data = chart.data.datasets[0].data;
+            data.shift();
+            data.push(temp);
+            chart.update();
+
+            // Simulace RTK statusu
+            if(Math.random() > 0.95) {
+                const isFixed = Math.random() > 0.3;
+                const rtkEl = document.getElementById('rtk-val');
+                const statText = document.getElementById('gps-status-text');
+                const dot = document.getElementById('status-dot');
+                const sysText = document.getElementById('system-status');
+
+                if(isFixed) {
+                    rtkEl.innerText = 'FIXED';
+                    rtkEl.style.color = 'var(--success)';
+                    statText.innerText = 'FIXED';
+                    dot.className = 'status-dot ok';
+                    sysText.innerText = 'AUTONOMY READY';
+                    sysText.style.color = 'var(--success)';
+                } else {
+                    rtkEl.innerText = 'FLOAT';
+                    rtkEl.style.color = 'var(--accent)';
+                    statText.innerText = 'FLOAT';
+                    dot.className = 'status-dot warn';
+                    sysText.innerText = 'MANUAL ONLY';
+                    sysText.style.color = 'var(--accent)';
+                }
+            }
+        }
+
+        // === UTILS ===
+        function toggleMod(head) {
+            const mod = head.parentElement;
+            const wasActive = mod.classList.contains('active');
+            document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+            if(!wasActive) {
+                mod.classList.add('active');
+                setTimeout(() => {
+                    const offset = mod.getBoundingClientRect().top + window.scrollY - 150;
+                    window.scrollTo({top: offset, behavior: 'smooth'});
+                }, 300);
+            }
+        }
+
+        function openMod(id) {
+            const mod = document.getElementById(id);
+            if(!mod.classList.contains('active')) toggleMod(mod.querySelector('.mod-head'));
+        }
+
+        // === START ===
+        window.onload = () => {
+            initMeteo();
+            initChart();
+            setInterval(simLoop, 1000);
+            calcService();
+        };
+
+    </script>
 </body>
 </html>
-
-
