@@ -13,8 +13,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- Externí Styly -->
-    <link rel="stylesheet" href="style.css">
+    <!-- Styl -->
+    <link rel="stylesheet" href="./style.css">
     
     <!-- Knihovny -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
@@ -24,72 +24,183 @@
     <!-- HLAVIČKA -->
     <header class="hud-header">
         <div class="header-row-top">
-            <div class="brand">
-                <h1>XROT <span>95 EVO</span></h1>
+            <div class="brand" onclick="App.goBack()" style="cursor: pointer;">
+                <!-- Dynamický název stroje -->
+                <h1 id="header-title">XROT <span>MANUAL</span></h1>
                 <div class="status">
                     <div id="status-dot" class="status-dot warn"></div> 
-                    <span id="system-status">INITIALIZING...</span>
+                    <span id="system-status">SELECT MACHINE...</span>
                 </div>
             </div>
-            <div class="meteo-box" id="meteo-widget"><i class="fas fa-satellite"></i> Načítám data...</div>
-        </div>
-        
-        <div class="sensor-row">
-            <div class="sensor-tile">
-                <span class="sensor-label">GPS RTK [Zdroj: 1]</span>
-                <span class="sensor-val" id="rtk-val" style="color:var(--accent)">FLOAT</span>
-            </div>
-            <div class="sensor-tile">
-                <span class="sensor-label">SVAH (Max 45°) [Zdroj: 3]</span>
-                <span class="sensor-val" id="tilt-val">0°</span>
-            </div>
-            <div class="sensor-tile">
-                <span class="sensor-label">TLAK NA PŮDU [Zdroj: 3]</span>
-                <span class="sensor-val">171g/cm²</span>
-            </div>
+            <div class="meteo-box" id="meteo-widget"><i class="fas fa-satellite"></i> Načítám...</div>
         </div>
     </header>
 
-    <!-- HLAVNÍ DASHBOARD -->
-    <div class="grid-container" id="dashboard-view">
-        
-        <!-- Sekce Moduly -->
-        <div class="card" style="--c:var(--danger)" onclick="openMod('mod-crisis')">
-            <div class="card-icon"><i class="fas fa-exclamation-triangle"></i></div>
-            <div class="card-title">KRIZOVÁ DIAGNOSTIKA</div>
-            <div class="card-sub">Hydrolock & Chybové kódy</div>
+    <!-- === VIEW 1: VÝBĚR STROJE === -->
+    <div id="view-selector" class="view-container">
+        <h2 class="section-title-large">DOSTUPNÉ JEDNOTKY</h2>
+        <div class="grid-container" id="machine-grid">
+            <!-- Zde se Javascriptem vygenerují dlaždice strojů -->
         </div>
-        
-        <div class="card" style="--c:var(--success)" onclick="openMod('mod-gps')">
-            <div class="card-icon"><i class="fas fa-map-marked-alt"></i></div>
-            <div class="card-title">RTK & DIGITÁLNÍ DVOJČE</div>
-            <div class="card-sub">CZEPOS & Export Tras</div>
-        </div>
-        
-        <div class="card" style="--c:var(--primary)" onclick="openMod('mod-tele')">
-            <div class="card-icon"><i class="fas fa-chart-area"></i></div>
-            <div class="card-title">TELEMETRIE</div>
-            <div class="card-sub">Live CAN-Bus Data</div>
-        </div>
-        
-        <div class="card" style="--c:var(--purple)" onclick="openMod('mod-acc')">
-            <div class="card-icon"><i class="fas fa-cubes"></i></div>
-            <div class="card-title">PŘÍSLUŠENSTVÍ</div>
-            <div class="card-sub">MiXTY, Flex, Snow</div>
-        </div>
-
-        <!-- NOVÁ KARTA SERVISNÍ KNIHY -->
-        <div class="card" style="--c:var(--accent)" onclick="ServiceBook.open()">
-            <div class="card-icon"><i class="fas fa-book-medical"></i></div>
-            <div class="card-title">SERVISNÍ KNIHA</div>
-            <div class="card-sub">Evidence, MTH & Údržba</div>
-        </div>
-
     </div>
 
-    <!-- === MODULY === -->
+    <!-- === VIEW 2: DASHBOARD STROJE (Původně skrytý) === -->
+    <div id="view-dashboard" class="view-container hidden">
+        
+        <!-- Horní senzory (jen pro Dashboard) -->
+        <div class="sensor-row">
+            <div class="sensor-tile">
+                <span class="sensor-label">GPS RTK</span>
+                <span class="sensor-val" id="rtk-val" style="color:var(--accent)">FLOAT</span>
+            </div>
+            <div class="sensor-tile">
+                <span class="sensor-label">SVAH (Max 45°)</span>
+                <span class="sensor-val" id="tilt-val">0°</span>
+            </div>
+            <div class="sensor-tile">
+                <span class="sensor-label">TLAK NA PŮDU</span>
+                <span class="sensor-val">171g/cm²</span>
+            </div>
+        </div>
 
-    <!-- 1. KRIZOVÁ DIAGNOSTIKA -->
+        <!-- Mřížka modulů -->
+        <div class="grid-container" style="margin-top: 20px;">
+            
+            <!-- Servisní Kniha (Hlavní) -->
+            <div class="card" style="--c:var(--accent)" onclick="ServiceBook.open()">
+                <div class="card-icon"><i class="fas fa-book-medical"></i></div>
+                <div class="card-title">SERVISNÍ KNIHA</div>
+                <div class="card-sub">Evidence, MTH & Údržba</div>
+            </div>
+
+            <!-- Telemetrie -->
+            <div class="card" style="--c:var(--primary)" onclick="openMod('mod-tele')">
+                <div class="card-icon"><i class="fas fa-chart-area"></i></div>
+                <div class="card-title">TELEMETRIE</div>
+                <div class="card-sub">Live CAN-Bus Data</div>
+            </div>
+
+            <!-- Krizová Diagnostika -->
+            <div class="card" style="--c:var(--danger)" onclick="openMod('mod-crisis')">
+                <div class="card-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="card-title">DIAGNOSTIKA</div>
+                <div class="card-sub">Chybové kódy & Hydrolock</div>
+            </div>
+            
+            <!-- RTK / GPS -->
+            <div class="card" style="--c:var(--success)" onclick="openMod('mod-gps')">
+                <div class="card-icon"><i class="fas fa-map-marked-alt"></i></div>
+                <div class="card-title">RTK & DIGITÁLNÍ DVOJČE</div>
+                <div class="card-sub">CZEPOS & Export Tras</div>
+            </div>
+            
+            <!-- Příslušenství -->
+            <div class="card" style="--c:var(--purple)" onclick="openMod('mod-acc')">
+                <div class="card-icon"><i class="fas fa-cubes"></i></div>
+                <div class="card-title">PŘÍSLUŠENSTVÍ</div>
+                <div class="card-sub">MiXTY, Flex, Snow</div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- === MODULY (Skrytá okna) === -->
+
+    <!-- 1. SERVISNÍ KNIHA -->
+    <div class="module" id="mod-service-book">
+        <div class="mod-head" style="background:var(--bg-surface); border-bottom:1px solid var(--primary);">
+            <div class="mod-title" style="width:100%; display:flex; justify-content:space-between;">
+                <span><i class="fas fa-book-medical mod-icon"></i> SERVISNÍ KNIHA</span>
+                <button class="cyber-btn-small" onclick="ServiceBook.close()">ZAVŘÍT ✕</button>
+            </div>
+        </div>
+        
+        <div class="mod-body">
+            <!-- Statistiky -->
+            <div class="stats-panel">
+                <div class="stat-box">
+                    <span class="stat-label">CELKEM MTH</span>
+                    <span class="stat-value" id="total-mth-display">0.0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">NÁKLADY (ROK)</span>
+                    <span class="stat-value text-accent" id="total-cost-display">0 Kč</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">POSLEDNÍ SERVIS</span>
+                    <span class="stat-value text-success" id="last-service-date">-</span>
+                </div>
+            </div>
+
+            <!-- Intervaly -->
+            <div class="maintenance-section">
+                <h4 class="section-title">INTERVALY ÚDRŽBY</h4>
+                <div class="service-progress">
+                    <div class="progress-info">
+                        <span>Motorový olej (100h)</span>
+                        <span class="text-mono" id="countdown-100">---</span>
+                    </div>
+                    <div class="progress-track"><div class="progress-fill" id="bar-100" style="width:0%; background:var(--success);"></div></div>
+                </div>
+                <div class="service-progress">
+                    <div class="progress-info">
+                        <span>Hydraulika & Filtry (500h)</span>
+                        <span class="text-mono" id="countdown-500">---</span>
+                    </div>
+                    <div class="progress-track"><div class="progress-fill" id="bar-500" style="width:0%; background:var(--primary);"></div></div>
+                </div>
+            </div>
+
+            <!-- Ovládání -->
+            <div class="control-bar">
+                <button class="cyber-btn btn-add" onclick="ServiceBook.toggleForm()"><i class="fas fa-plus"></i> NOVÝ ZÁZNAM</button>
+                <div class="secondary-actions">
+                    <button class="cyber-btn-icon" onclick="ServiceBook.exportData()"><i class="fas fa-download"></i></button>
+                    <input type="file" id="import-file-book" style="display:none" onchange="ServiceBook.importData(this)">
+                    <button class="cyber-btn-icon" onclick="document.getElementById('import-file-book').click()"><i class="fas fa-upload"></i></button>
+                </div>
+            </div>
+
+            <!-- Formulář -->
+            <div id="add-service-form" class="cyber-form hidden">
+                <h4 style="color:var(--accent); margin-bottom:10px;">NOVÝ ÚKON</h4>
+                <div class="form-grid">
+                    <div class="form-group"><label>Datum</label><input type="date" id="book-date" class="cyber-input"></div>
+                    <div class="form-group"><label>MTH</label><input type="number" id="book-mth" class="cyber-input" step="0.1"></div>
+                    <div class="form-group">
+                        <label>Typ</label>
+                        <select id="book-type" class="cyber-input">
+                            <option value="check">Kontrola</option>
+                            <option value="oil">Olej</option>
+                            <option value="filter">Filtry</option>
+                            <option value="repair">Oprava</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Cena</label><input type="number" id="book-cost" class="cyber-input"></div>
+                </div>
+                <div class="form-group"><label>Popis</label><textarea id="book-desc" class="cyber-input" rows="2"></textarea></div>
+                <div class="form-actions">
+                    <button class="cyber-btn btn-save" onclick="ServiceBook.saveRecord()">ULOŽIT</button>
+                    <button class="cyber-btn btn-cancel" onclick="ServiceBook.toggleForm()">ZRUŠIT</button>
+                </div>
+            </div>
+
+            <!-- Historie -->
+            <div class="history-list-container">
+                <div class="list-header">
+                    <span class="text-muted">HISTORIE</span>
+                    <select class="mini-select" onchange="ServiceBook.filterList(this.value)">
+                        <option value="all">Vše</option>
+                        <option value="oil">Oleje</option>
+                        <option value="repair">Opravy</option>
+                    </select>
+                </div>
+                <div id="service-list-output"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. KRIZOVÁ DIAGNOSTIKA -->
     <div class="module" id="mod-crisis">
         <div class="mod-head" onclick="toggleMod(this)">
             <div class="mod-title"><i class="fas fa-heartbeat mod-icon"></i> DIAGNOSTIKA & CHYBY (ECU)</div>
@@ -113,7 +224,7 @@
         </div>
     </div>
 
-    <!-- 2. RTK & GPS -->
+    <!-- 3. RTK & GPS -->
     <div class="module" id="mod-gps">
         <div class="mod-head" onclick="toggleMod(this)">
             <div class="mod-title"><i class="fas fa-satellite mod-icon"></i> RTK & CZEPOS</div>
@@ -129,7 +240,7 @@
         </div>
     </div>
 
-    <!-- 3. TELEMETRIE -->
+    <!-- 4. TELEMETRIE -->
     <div class="module" id="mod-tele">
         <div class="mod-head" onclick="toggleMod(this)">
             <div class="mod-title"><i class="fas fa-microchip mod-icon"></i> LIVE TELEMETRIE</div>
@@ -146,7 +257,7 @@
         </div>
     </div>
 
-    <!-- 4. PŘÍSLUŠENSTVÍ -->
+    <!-- 5. PŘÍSLUŠENSTVÍ -->
     <div class="module" id="mod-acc">
         <div class="mod-head" onclick="toggleMod(this)">
             <div class="mod-title"><i class="fas fa-plug mod-icon"></i> PŘÍSLUŠENSTVÍ</div>
@@ -158,101 +269,6 @@
             </div>
             <div style="border-left:3px solid var(--accent); padding-left:10px;">
                 <strong>Flex Cut</strong><br><small>Boční sečení 420mm.</small>
-            </div>
-        </div>
-    </div>
-
-    <!-- 5. SERVISNÍ KNIHA (NOVÝ MODUL) -->
-    <div class="module" id="mod-service-book">
-        <div class="mod-head" onclick="toggleMod(this)">
-            <div class="mod-title"><i class="fas fa-book-medical mod-icon"></i> DIGITÁLNÍ SERVISNÍ KNIHA</div>
-            <i class="fas fa-chevron-down mod-chevron"></i>
-        </div>
-        <div class="mod-body">
-            
-            <!-- HORNÍ LIŠTA: STATISTIKY -->
-            <div class="stats-panel">
-                <div class="stat-box">
-                    <span class="stat-label">CELKEM MTH</span>
-                    <span class="stat-value" id="total-mth-display">0.0</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">NÁKLADY (ROK)</span>
-                    <span class="stat-value text-accent" id="total-cost-display">0 Kč</span>
-                </div>
-                <div class="stat-box">
-                    <span class="stat-label">POSLEDNÍ SERVIS</span>
-                    <span class="stat-value text-success" id="last-service-date">-</span>
-                </div>
-            </div>
-
-            <!-- INTERVALY ÚDRŽBY -->
-            <div class="maintenance-section">
-                <h4 class="section-title">BLÍŽÍCÍ SE INTERVALY</h4>
-                <div class="service-progress">
-                    <div class="progress-info">
-                        <span>Motorový olej (100h)</span>
-                        <span class="text-mono" id="countdown-100">---</span>
-                    </div>
-                    <div class="progress-track"><div class="progress-fill" id="bar-100" style="width: 0%; background: var(--success);"></div></div>
-                </div>
-                <div class="service-progress">
-                    <div class="progress-info">
-                        <span>Hydraulika & Filtry (500h)</span>
-                        <span class="text-mono" id="countdown-500">---</span>
-                    </div>
-                    <div class="progress-track"><div class="progress-fill" id="bar-500" style="width: 0%; background: var(--primary);"></div></div>
-                </div>
-            </div>
-
-            <!-- OVLÁDACÍ TLAČÍTKA -->
-            <div class="control-bar">
-                <button class="cyber-btn btn-add" onclick="ServiceBook.toggleForm()">
-                    <i class="fas fa-plus"></i> NOVÝ ZÁZNAM
-                </button>
-                <div class="secondary-actions">
-                    <button class="cyber-btn-icon" onclick="ServiceBook.exportData()"><i class="fas fa-download"></i></button>
-                    <input type="file" id="import-file-book" style="display:none" onchange="ServiceBook.importData(this)">
-                    <button class="cyber-btn-icon" onclick="document.getElementById('import-file-book').click()"><i class="fas fa-upload"></i></button>
-                </div>
-            </div>
-
-            <!-- FORMULÁŘ (Skrytý) -->
-            <div id="add-service-form" class="cyber-form hidden">
-                <h4 style="color:var(--accent); margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:5px;">NOVÝ SERVISNÍ ÚKON</h4>
-                <div class="form-grid">
-                    <div class="form-group"><label>Datum</label><input type="date" id="book-date" class="cyber-input"></div>
-                    <div class="form-group"><label>Stav MTH</label><input type="number" id="book-mth" class="cyber-input" step="0.1" placeholder="0.0"></div>
-                    <div class="form-group">
-                        <label>Typ úkonu</label>
-                        <select id="book-type" class="cyber-input">
-                            <option value="check">Běžná kontrola</option>
-                            <option value="oil">Výměna oleje</option>
-                            <option value="filter">Výměna filtrů</option>
-                            <option value="blade">Broušení/Výměna nožů</option>
-                            <option value="repair">Oprava / Porucha</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label>Cena (Kč)</label><input type="number" id="book-cost" class="cyber-input" placeholder="0"></div>
-                </div>
-                <div class="form-group"><label>Popis / Mechanik</label><textarea id="book-desc" class="cyber-input" rows="2" placeholder="Detaily úkonu..."></textarea></div>
-                <div class="form-actions">
-                    <button class="cyber-btn btn-save" onclick="ServiceBook.saveRecord()">ULOŽIT DO DB</button>
-                    <button class="cyber-btn btn-cancel" onclick="ServiceBook.toggleForm()">ZRUŠIT</button>
-                </div>
-            </div>
-
-            <!-- HISTORIE -->
-            <div class="history-list-container">
-                <div class="list-header">
-                    <span class="text-muted">HISTORIE ÚKONŮ</span>
-                    <select class="mini-select" onchange="ServiceBook.filterList(this.value)">
-                        <option value="all">Vše</option>
-                        <option value="oil">Oleje</option>
-                        <option value="repair">Opravy</option>
-                    </select>
-                </div>
-                <div id="service-list-output"></div>
             </div>
         </div>
     </div>
@@ -276,7 +292,7 @@
         <div class="fab fab-ai" onclick="toggleAI()"><i class="fas fa-robot"></i></div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="./app.js"></script>
 </body>
 </html>
 
