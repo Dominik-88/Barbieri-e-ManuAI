@@ -18,9 +18,9 @@ const App = {
 
     init: function() {
         this.renderMachines();
-        // Pokud je uložen poslední stroj, otevřeme ho (volitelné, zde vypnuto pro testování výběru)
-        // const last = localStorage.getItem('lastMachine');
-        // if(last) this.selectMachine(last);
+        // Pokud je uložen poslední stroj, otevřeme ho
+        const last = localStorage.getItem('lastMachine');
+        if(last) this.selectMachine(last);
     },
 
     renderMachines: function() {
@@ -41,7 +41,6 @@ const App = {
         if (!m) return;
         
         this.activeMachine = m;
-        // Uložit do storage
         localStorage.setItem('lastMachine', id);
 
         // Update UI
@@ -54,7 +53,7 @@ const App = {
         document.getElementById('view-dashboard').classList.remove('hidden');
 
         // Inicializovat moduly pro tento stroj
-        ServiceBook.machineId = id; // Nastavit ID pro servisní knihu
+        ServiceBook.machineId = id; 
         ServiceBook.init();
     },
 
@@ -62,7 +61,7 @@ const App = {
         document.getElementById('view-dashboard').classList.add('hidden');
         document.getElementById('view-selector').classList.remove('hidden');
         document.getElementById('header-title').innerHTML = "XROT <span>MANUAL</span>";
-        document.getElementById('system-status').innerText = "SELECT MACHINE...";
+        document.getElementById('system-status').innerText = "VYBERTE STROJ...";
         document.getElementById('status-dot').className = "status-dot warn";
         this.activeMachine = null;
         localStorage.removeItem('lastMachine');
@@ -72,13 +71,12 @@ const App = {
 // === 3. SERVISNÍ KNIHA ===
 const ServiceBook = {
     data: [],
-    machineId: 'default', // Bude přepsáno při výběru stroje
+    machineId: 'default',
     
     open: function() { openMod('mod-service-book'); },
-    close: function() { document.getElementById('mod-service-book').classList.remove('active'); },
+    close: function() { document.getElementById('mod-service-book').classList.remove('active'); document.body.style.overflow = 'auto'; },
 
     init: function() {
-        // Načíst data specifická pro tento stroj
         const stored = localStorage.getItem('service_data_' + this.machineId);
         this.data = stored ? JSON.parse(stored) : [];
         this.renderList();
@@ -118,7 +116,13 @@ const ServiceBook = {
         const maxMth = Math.max(...this.data.map(i => i.mth));
         document.getElementById('total-mth-display').innerText = maxMth.toFixed(1);
         
-        // Progress Bars
+        const yr = new Date().getFullYear();
+        const costs = this.data.filter(i => new Date(i.date).getFullYear() === yr).reduce((a,b)=>a+b.cost,0);
+        document.getElementById('total-cost-display').innerText = costs + " Kč";
+
+        const sorted = [...this.data].sort((a,b) => new Date(b.date) - new Date(a.date));
+        document.getElementById('last-service-date').innerText = sorted[0].date;
+
         this.updateBar('100', 100, maxMth);
         this.updateBar('500', 500, maxMth);
     },
@@ -174,9 +178,29 @@ const ServiceBook = {
 };
 
 // === 4. UTILS & START ===
-function openMod(id) { document.getElementById(id).classList.add('active'); }
-function toggleMod(head) { head.parentElement.classList.remove('active'); } // Simple close
+function openMod(id) { 
+    document.getElementById(id).classList.add('active'); 
+    document.body.style.overflow = 'hidden';
+}
+function toggleMod(head) { 
+    head.parentElement.classList.remove('active'); 
+    document.body.style.overflow = 'auto';
+}
 function toggleAI() { document.getElementById('aiOverlay').classList.toggle('open'); }
+
+function sendAI() {
+    const inp = document.getElementById('ai-input');
+    const val = inp.value;
+    if(!val) return;
+    document.getElementById('ai-chat-body').innerHTML += `<div class="ai-msg user">${val}</div>`;
+    inp.value = "";
+    // Simulace odpovědi
+    setTimeout(() => {
+        const match = KB.find(k => val.toLowerCase().includes(k.id));
+        const resp = match ? match.b : "Pro tuto frázi nemám data. Zkuste 'olej' nebo '107'.";
+        document.getElementById('ai-chat-body').innerHTML += `<div class="ai-msg bot">${resp}</div>`;
+    }, 500);
+}
 
 // Start Aplikace
 window.onload = function() {
