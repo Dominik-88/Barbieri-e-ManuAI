@@ -225,5 +225,3 @@ window.onload = function() {
         }, 1000);
     }
 };
-
-
